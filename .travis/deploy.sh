@@ -1,5 +1,4 @@
 #!/bin/bash
-cd `dirname $0`/.. 
 
 if [ -z "$SONATYPE_USERNAME" ]
 then
