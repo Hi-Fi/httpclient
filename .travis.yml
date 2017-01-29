@@ -14,7 +14,7 @@ deploy:
     script: .travis/deploy.sh
     skip_cleanup: true
     on:
-      repo: hi-fi/httpclient
+      repo: Hi-Fi/httpclient
       branch: master
       jdk: oraclejdk8
   -
@@ -22,6 +22,6 @@ deploy:
     script: .travis/deploy.sh
     skip_cleanup: true
     on:
-      repo: hi-fi/httpclient
+      repo: Hi-Fi/httpclient
       tags: true
       jdk: oraclejdk8
