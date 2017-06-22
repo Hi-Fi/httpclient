@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.net.ssl.HostnameVerifier;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
@@ -33,6 +35,9 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIUtils;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -58,32 +63,45 @@ public class RestClient {
 		return sessions.get(alias);
 	}
 	
-	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify) {
-		this.createSession(alias, url, headers, auth, verify, false, "");
-	}
+    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth,
+            String verify) {
+        this.createSession(alias, url, headers, auth, verify, false, "", "", true, false);
+    }
 
-	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
-			Boolean debug, String loggerClass) {
-		if (!loggerClass.isEmpty()) {
-			System.setProperty("org.apache.commons.logging.Log", loggerClass);
-			System.setProperty("org.apache.commons.logging.robotlogger.log.org.apache.http", debug ? "DEBUG": "INFO");
-		}
-		HttpHost target;
-		try {
-			target = URIUtils.extractHost(new URI(url));
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("Parsing of URL failed. Error message: " + e.getMessage());
-		}
-		Session session = new Session();
-		session.setContext(this.createContext(auth, target));
-		session.setClient(this.createHttpClient(auth, verify, target, false));
-		session.setUrl(url);
-		session.setHeaders(headers);
-		session.setHttpHost(target);
-		session.setVerify(verify);
-		session.setAuthentication(auth);
-		sessions.put(alias, session);
-	}
+    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+            String password, boolean verifyHost, boolean selfSigned) {
+        this.createSession(alias, url, headers, auth, verify, false, "", password, verifyHost, selfSigned);
+    }
+
+    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+            Boolean debug, String loggerClass, String password, boolean verifyHost, boolean selfSigned) {
+
+        HostnameVerifier defaultHostnameVerifier = verifyHost ? null : NoopHostnameVerifier.INSTANCE;
+        TrustStrategy trustStrategy = selfSigned ? new TrustSelfSignedStrategy() :null;
+
+        if (!loggerClass.isEmpty()) {
+            System.setProperty("org.apache.commons.logging.Log", loggerClass);
+            System.setProperty("org.apache.commons.logging.robotlogger.log.org.apache.http", debug ? "DEBUG" : "INFO");
+        }
+        HttpHost target;
+        try {
+            target = URIUtils.extractHost(new URI(url));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Parsing of URL failed. Error message: " + e.getMessage());
+        }
+        Session session = new Session();
+        session.setContext(this.createContext(auth, target));
+        session.setClient(this.createHttpClient(auth, verify, target, false, password, null, null));
+        session.setUrl(url);
+        session.setHeaders(headers);
+        session.setHttpHost(target);
+        session.setVerify(verify);
+        session.setAuthentication(auth);
+        session.setPassword(password);
+        session.setHostnameVerifier(defaultHostnameVerifier);
+        session.setTrustStrategy(trustStrategy);
+        sessions.put(alias, session);
+    }
 
 	public void makeGetRequest(String alias, String uri, Map<String, String> headers, Map<String, String> parameters,
 			boolean allowRedirects) {
@@ -155,8 +173,8 @@ public class RestClient {
 		}
 		if (allowRedirects) {
 			Session session = this.getSession(alias);
-			session.setClient(this.createHttpClient(session.getAuthentication(), session.getVerify(),
-					session.getHttpHost(), true));
+            session.setClient(this.createHttpClient(session.getAuthentication(), session.getVerify(),
+                    session.getHttpHost(), true, session.getPassword(), session.getTrustStrategy(), session.getHostnameVerifier()));
 		}
 		Session session = this.getSession(alias);
 		this.makeRequest(postRequest, session);
@@ -255,7 +273,12 @@ public class RestClient {
 		return httpClientContext;
 	}
 
-	private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects) {
+    private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects) {
+        return createHttpClient(auth, verify, target, postRedirects, null, null, null);
+    }
+
+    private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects,
+            String password, TrustStrategy keystoreTrustStrategy,HostnameVerifier keystoreHostnameVerifier) {
 		Certificate certificate = new Certificate();
 		Auth authHelper = new Auth();
 		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
@@ -265,8 +288,8 @@ public class RestClient {
 
 		if (new File(verify).exists()) {
 			logger.debug("Loading custom keystore");
-			httpClientBuilder.setSSLSocketFactory(
-					certificate.allowAllCertificates(certificate.createCustomKeyStore(verify.toString())));
+            httpClientBuilder.setSSLSocketFactory(certificate.allowAllCertificates(
+                    certificate.createCustomKeyStore(verify.toString(), password), password, keystoreTrustStrategy, keystoreHostnameVerifier));
 		} else if (!Boolean.parseBoolean(verify.toString())) {
 			logger.debug("Allowing all certificates");
 			httpClientBuilder.setSSLSocketFactory(certificate.allowAllCertificates(null));

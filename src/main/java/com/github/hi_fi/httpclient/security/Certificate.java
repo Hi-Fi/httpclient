@@ -2,11 +2,13 @@ package com.github.hi_fi.httpclient.security;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -30,18 +32,23 @@ public class Certificate {
 	
 	private Log logger = LogFactory.getLog(RestClient.class);
 	
-	public KeyStore createCustomKeyStore(String path) {
+	public KeyStore createCustomKeyStore(String path, String password) {
 		KeyStore trustStore;
 		try {
-			trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-			trustStore.load(null);
-			int i = 0;
-			for (X509Certificate cert : this.getCertificatesFromFile(path)) {
-				trustStore.setCertificateEntry("Custom_entry_" + i, cert);
-				i++;
-			}
-			logger.debug("Certificates in trustStore: "+(i));
-			return trustStore;
+	            if (password!=null && path.endsWith(".jks")) {
+	                trustStore = KeyStore.getInstance("JKS");
+	                trustStore.load(new FileInputStream(path), password.toCharArray());
+	            } else {
+	                trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+	                trustStore.load(null);
+	                int i = 0;
+	                for (X509Certificate cert : this.getCertificatesFromFile(path)) {
+	                    trustStore.setCertificateEntry("Custom_entry_" + i, cert);
+	                    i++;
+	                }
+	                logger.debug("Certificates in trustStore: " + (i));
+	            }
+	            return trustStore;
 		} catch (KeyStoreException e) {
 			throw new RuntimeException(String.format("%s occurred. Error message: %s", e.getClass(), e.getMessage()));
 		} catch (NoSuchAlgorithmException e) {
@@ -80,22 +87,33 @@ public class Certificate {
 
 		return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certBytes));
 	}
+	
+    public SSLConnectionSocketFactory allowAllCertificates(KeyStore keyStore) {
+        return allowAllCertificates(keyStore, null, null, null);
+    }
 
-	public SSLConnectionSocketFactory allowAllCertificates(KeyStore keyStore) {
+	public SSLConnectionSocketFactory allowAllCertificates(KeyStore keyStore, String password, TrustStrategy keystoreTrustStrategy, HostnameVerifier keystoreHostnameVerifier) {
 		SSLContextBuilder sshbuilder = new SSLContextBuilder();
 		TrustStrategy trustStrategy = new TrustSelfSignedStrategy();
 		HostnameVerifier hostnameVerifier = NoopHostnameVerifier.INSTANCE;
 		if (keyStore != null) {
-			trustStrategy = null;
-			hostnameVerifier = null;
+            trustStrategy = keystoreTrustStrategy;
+            hostnameVerifier = keystoreHostnameVerifier;
 		}
-		try {
-			sshbuilder.loadTrustMaterial(keyStore, trustStrategy);
+        try {
+            if (password == null) {
+                sshbuilder.loadTrustMaterial(keyStore, trustStrategy);
+            } else {
+                sshbuilder.loadTrustMaterial(null, trustStrategy).loadKeyMaterial(keyStore,
+                        password.toCharArray());
+            }
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(String.format("%s occurred. Error message: %s", e.getClass(), e.getMessage()));
 		} catch (KeyStoreException e) {
 			throw new RuntimeException(String.format("%s occurred. Error message: %s", e.getClass(), e.getMessage()));
-		}
+		}catch (UnrecoverableKeyException e) {
+            throw new RuntimeException(String.format("%s occurred. Error message: %s", e.getClass(), e.getMessage()));
+        }
 		try {
 			return new SSLConnectionSocketFactory(sshbuilder.build(), hostnameVerifier);
 		} catch (KeyManagementException e) {
