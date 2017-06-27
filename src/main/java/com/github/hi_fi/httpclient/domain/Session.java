@@ -3,12 +3,15 @@ package com.github.hi_fi.httpclient.domain;
 import java.io.IOException;
 import java.util.Map;
 
+import javax.net.ssl.HostnameVerifier;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.util.EntityUtils;
 
 public class Session {
@@ -22,6 +25,9 @@ public class Session {
 	private HttpHost httpHost;
 	private String verify;
 	private Map<String, String> headers;
+    private HostnameVerifier hostnameVerifier;
+    private TrustStrategy trustStrategy;	
+    private String password;
 
 	public String getAlias() {
 		return alias;
@@ -121,4 +127,54 @@ public class Session {
 	public void setHeaders(Map<String, String> headers) {
 		this.headers = headers;
 	}
+
+    /**
+     * Get the hostnameVerifier.
+     * @return the hostnameVerifier
+     */
+    public HostnameVerifier getHostnameVerifier() {
+        return hostnameVerifier;
+    }
+
+    /**
+     * Set the hostnameVerifier.
+     * @param hostnameVerifier the hostnameVerifier to set
+     */
+    public void setHostnameVerifier(HostnameVerifier hostnameVerifier) {
+        this.hostnameVerifier = hostnameVerifier;
+    }
+
+    /**
+     * Get the trustStrategy.
+     * @return the trustStrategy
+     */
+    public TrustStrategy getTrustStrategy() {
+        return trustStrategy;
+    }
+
+    /**
+     * Set the trustStrategy.
+     * @param trustStrategy the trustStrategy to set
+     */
+    public void setTrustStrategy(TrustStrategy trustStrategy) {
+        this.trustStrategy = trustStrategy;
+    }
+
+    /**
+     * Get the password.
+     * @return the password
+     */
+    public String getPassword() {
+        return password;
+    }
+
+    /**
+     * Set the password.
+     * @param password the password to set
+     */
+    public void setPassword(String password) {
+        this.password = password;
+    }
+	
+	
 }
