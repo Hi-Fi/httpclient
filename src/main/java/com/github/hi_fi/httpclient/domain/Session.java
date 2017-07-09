@@ -28,6 +28,7 @@ public class Session {
     private HostnameVerifier hostnameVerifier;
     private TrustStrategy trustStrategy;	
     private String password;
+    private Proxy proxy;
 
 	public String getAlias() {
 		return alias;
@@ -175,6 +176,12 @@ public class Session {
     public void setPassword(String password) {
         this.password = password;
     }
-	
-	
+
+	public Proxy getProxy() {
+		return proxy;
+	}
+
+	public void setProxy(Proxy proxy) {
+		this.proxy = proxy;
+	}	
 }

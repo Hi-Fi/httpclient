@@ -25,6 +25,7 @@ import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.config.RequestConfig.Builder;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -48,6 +49,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 
 import com.github.hi_fi.httpclient.domain.Authentication;
+import com.github.hi_fi.httpclient.domain.Proxy;
 import com.github.hi_fi.httpclient.domain.Session;
 import com.github.hi_fi.httpclient.extend.CustomRedirectStrategy;
 import com.github.hi_fi.httpclient.extend.HttpDeleteWithBody;
@@ -62,46 +64,57 @@ public class RestClient {
 	public Session getSession(String alias) {
 		return sessions.get(alias);
 	}
-	
-    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth,
-            String verify) {
-        this.createSession(alias, url, headers, auth, verify, false, "", "", true, false);
-    }
 
-    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
-            String password, boolean verifyHost, boolean selfSigned) {
-        this.createSession(alias, url, headers, auth, verify, false, "", password, verifyHost, selfSigned);
-    }
+	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+			Boolean debug) {
+		this.createSession(alias, url, headers, auth, verify, debug, "", "", true, false);
+	}
 
-    public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
-            Boolean debug, String loggerClass, String password, boolean verifyHost, boolean selfSigned) {
+	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+			Boolean debug, Proxy proxy) {
+		this.createSession(alias, url, headers, auth, verify, debug, "", "", true, false, proxy);
+	}
 
-        HostnameVerifier defaultHostnameVerifier = verifyHost ? null : NoopHostnameVerifier.INSTANCE;
-        TrustStrategy trustStrategy = selfSigned ? new TrustSelfSignedStrategy() :null;
+	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+			Boolean debug, String password, boolean verifyHost, boolean selfSigned, Proxy proxy) {
+		this.createSession(alias, url, headers, auth, verify, debug, "", password, verifyHost, selfSigned, proxy);
+	}
 
-        if (!loggerClass.isEmpty()) {
-            System.setProperty("org.apache.commons.logging.Log", loggerClass);
-            System.setProperty("org.apache.commons.logging.robotlogger.log.org.apache.http", debug ? "DEBUG" : "INFO");
-        }
-        HttpHost target;
-        try {
-            target = URIUtils.extractHost(new URI(url));
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Parsing of URL failed. Error message: " + e.getMessage());
-        }
-        Session session = new Session();
-        session.setContext(this.createContext(auth, target));
-        session.setClient(this.createHttpClient(auth, verify, target, false, password, null, null));
-        session.setUrl(url);
-        session.setHeaders(headers);
-        session.setHttpHost(target);
-        session.setVerify(verify);
-        session.setAuthentication(auth);
-        session.setPassword(password);
-        session.setHostnameVerifier(defaultHostnameVerifier);
-        session.setTrustStrategy(trustStrategy);
-        sessions.put(alias, session);
-    }
+	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+			Boolean debug, String loggerClass, String password, boolean verifyHost, boolean selfSigned) {
+		this.createSession(alias, url, headers, auth, verify, false, "", password, verifyHost, selfSigned, null);
+	}
+
+	public void createSession(String alias, String url, Map<String, String> headers, Authentication auth, String verify,
+			Boolean debug, String loggerClass, String password, boolean verifyHost, boolean selfSigned, Proxy proxy) {
+
+		HostnameVerifier defaultHostnameVerifier = verifyHost ? null : NoopHostnameVerifier.INSTANCE;
+		TrustStrategy trustStrategy = selfSigned ? new TrustSelfSignedStrategy() : null;
+
+		if (!loggerClass.isEmpty()) {
+			System.setProperty("org.apache.commons.logging.Log", loggerClass);
+			System.setProperty("org.apache.commons.logging.robotlogger.log.org.apache.http", debug ? "DEBUG" : "INFO");
+		}
+		HttpHost target;
+		try {
+			target = URIUtils.extractHost(new URI(url));
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("Parsing of URL failed. Error message: " + e.getMessage());
+		}
+		Session session = new Session();
+		session.setProxy(proxy);
+		session.setContext(this.createContext(auth, target));
+		session.setClient(this.createHttpClient(auth, verify, target, false, password, null, null, proxy));
+		session.setUrl(url);
+		session.setHeaders(headers);
+		session.setHttpHost(target);
+		session.setVerify(verify);
+		session.setAuthentication(auth);
+		session.setPassword(password);
+		session.setHostnameVerifier(defaultHostnameVerifier);
+		session.setTrustStrategy(trustStrategy);
+		sessions.put(alias, session);
+	}
 
 	public void makeGetRequest(String alias, String uri, Map<String, String> headers, Map<String, String> parameters,
 			boolean allowRedirects) {
@@ -173,8 +186,9 @@ public class RestClient {
 		}
 		if (allowRedirects) {
 			Session session = this.getSession(alias);
-            session.setClient(this.createHttpClient(session.getAuthentication(), session.getVerify(),
-                    session.getHttpHost(), true, session.getPassword(), session.getTrustStrategy(), session.getHostnameVerifier()));
+			session.setClient(
+					this.createHttpClient(session.getAuthentication(), session.getVerify(), session.getHttpHost(), true,
+							session.getPassword(), session.getTrustStrategy(), session.getHostnameVerifier()));
 		}
 		Session session = this.getSession(alias);
 		this.makeRequest(postRequest, session);
@@ -273,23 +287,32 @@ public class RestClient {
 		return httpClientContext;
 	}
 
-    private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects) {
-        return createHttpClient(auth, verify, target, postRedirects, null, null, null);
-    }
+	private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects) {
+		return createHttpClient(auth, verify, target, postRedirects, null, null, null);
+	}
 
-    private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects,
-            String password, TrustStrategy keystoreTrustStrategy,HostnameVerifier keystoreHostnameVerifier) {
+	private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects,
+			String password, TrustStrategy keystoreTrustStrategy, HostnameVerifier keystoreHostnameVerifier) {
+		return createHttpClient(auth, verify, target, postRedirects, null, null, null, null);
+	}
+
+	private HttpClient createHttpClient(Authentication auth, String verify, HttpHost target, Boolean postRedirects,
+			String password, TrustStrategy keystoreTrustStrategy, HostnameVerifier keystoreHostnameVerifier,
+			Proxy proxy) {
 		Certificate certificate = new Certificate();
 		Auth authHelper = new Auth();
 		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+		Builder requestConfig = RequestConfig.custom();
+		requestConfig.setCookieSpec(CookieSpecs.DEFAULT);
 
 		logger.debug("Verify value: " + verify);
 		logger.debug((new File(verify).getAbsolutePath()));
 
 		if (new File(verify).exists()) {
 			logger.debug("Loading custom keystore");
-            httpClientBuilder.setSSLSocketFactory(certificate.allowAllCertificates(
-                    certificate.createCustomKeyStore(verify.toString(), password), password, keystoreTrustStrategy, keystoreHostnameVerifier));
+			httpClientBuilder.setSSLSocketFactory(
+					certificate.allowAllCertificates(certificate.createCustomKeyStore(verify.toString(), password),
+							password, keystoreTrustStrategy, keystoreHostnameVerifier));
 		} else if (!Boolean.parseBoolean(verify.toString())) {
 			logger.debug("Allowing all certificates");
 			httpClientBuilder.setSSLSocketFactory(certificate.allowAllCertificates(null));
@@ -299,11 +322,20 @@ public class RestClient {
 			httpClientBuilder.setDefaultCredentialsProvider(authHelper.getCredentialsProvider(auth, target));
 		}
 
+		if (proxy != null && proxy.isInUse()) {
+			logger.debug("Enabling proxy");
+			if (proxy.isAuthenticable()) {
+				logger.debug("Setting proxy credentials");
+				httpClientBuilder.setDefaultCredentialsProvider(
+						authHelper.getCredentialsProvider(proxy.getAuth(), proxy.getHttpHost()));
+			}
+			requestConfig.setProxy(proxy.getHttpHost());
+		}
+
 		if (postRedirects) {
 			httpClientBuilder.setRedirectStrategy(new CustomRedirectStrategy());
 		}
-		RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.DEFAULT).build();
-		httpClientBuilder.setDefaultRequestConfig(requestConfig);
+		httpClientBuilder.setDefaultRequestConfig(requestConfig.build());
 
 		return httpClientBuilder.build();
 	}
