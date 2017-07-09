@@ -323,7 +323,9 @@ public class RestClient {
 		}
 
 		if (proxy != null && proxy.isInUse()) {
+			logger.debug("Enabling proxy");
 			if (proxy.isAuthenticable()) {
+				logger.debug("Setting proxy credentials");
 				httpClientBuilder.setDefaultCredentialsProvider(
 						authHelper.getCredentialsProvider(proxy.getAuth(), proxy.getHttpHost()));
 			}
