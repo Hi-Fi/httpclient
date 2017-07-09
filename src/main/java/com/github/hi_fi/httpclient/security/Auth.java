@@ -15,6 +15,8 @@ import com.github.hi_fi.httpclient.domain.Authentication;
 
 public class Auth {
 	
+	private CredentialsProvider credsProvider = new BasicCredentialsProvider();
+	
 	public AuthCache getAuthCache(Authentication auth, HttpHost target) {
 		AuthCache authCache = new BasicAuthCache();
 		AuthScheme authScheme = null;
@@ -34,12 +36,9 @@ public class Auth {
 	}
 	
 	public CredentialsProvider getCredentialsProvider(Authentication auth, HttpHost target) {
-		CredentialsProvider credsProvider = new BasicCredentialsProvider();
-
-        credsProvider.setCredentials(
-        		new AuthScope(target.getHostName(), target.getPort()),
-                new UsernamePasswordCredentials(auth.getUsername(), auth.getPassword()));
-        return credsProvider;
+		 this.credsProvider.setCredentials(
+	        		new AuthScope(target.getHostName(), target.getPort()),
+	                new UsernamePasswordCredentials(auth.getUsername(), auth.getPassword()));
+	        return credsProvider;
 	}
-
 }
