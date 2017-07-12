@@ -33,6 +33,7 @@ import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIUtils;
@@ -266,7 +267,12 @@ public class RestClient {
 		return builder.build();
 	}
 
-	private void makeRequest(HttpUriRequest request, Session session) {
+	private void makeRequest(HttpRequestBase request, Session session) {
+		System.out.println(session.getProxy().getHttpHost());
+		if (session.getProxy().isInUse()) {
+			System.out.println(session.getProxy().getHttpHost());
+			request.setConfig(RequestConfig.custom().setProxy(session.getProxy().getHttpHost()).build());
+		}
 		request = this.setHeaders(request, session.getHeaders());
 		try {
 			session.setResponse(session.getClient().execute(request, session.getContext()));
@@ -322,16 +328,6 @@ public class RestClient {
 			httpClientBuilder.setDefaultCredentialsProvider(authHelper.getCredentialsProvider(auth, target));
 		}
 
-		if (proxy != null && proxy.isInUse()) {
-			logger.debug("Enabling proxy");
-			if (proxy.isAuthenticable()) {
-				logger.debug("Setting proxy credentials");
-				httpClientBuilder.setDefaultCredentialsProvider(
-						authHelper.getCredentialsProvider(proxy.getAuth(), proxy.getHttpHost()));
-			}
-			requestConfig.setProxy(proxy.getHttpHost());
-		}
-
 		if (postRedirects) {
 			httpClientBuilder.setRedirectStrategy(new CustomRedirectStrategy());
 		}
@@ -351,11 +347,13 @@ public class RestClient {
 			url = url + separator + uri;
 		}
 		String parameterString = "";
-		for (String key : parameters.keySet()) {
-			try {
-				parameterString += key + "=" + URLEncoder.encode(parameters.get(key), "UTF-8") + "&";
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException("Unsupported encoding noticed. Error message: " + e.getMessage());
+		if (parameters != null) {
+			for (String key : parameters.keySet()) {
+				try {
+					parameterString += key + "=" + URLEncoder.encode(parameters.get(key), "UTF-8") + "&";
+				} catch (UnsupportedEncodingException e) {
+					throw new RuntimeException("Unsupported encoding noticed. Error message: " + e.getMessage());
+				}
 			}
 		}
 		url += parameterString.length() > 1 ? "?" + parameterString.substring(0, parameterString.length() - 1) : "";
@@ -363,8 +361,10 @@ public class RestClient {
 	}
 
 	private <T> T setHeaders(T request, Map<String, String> headers) {
-		for (Entry<String, String> entry : headers.entrySet()) {
-			((HttpRequest) request).setHeader(entry.getKey(), entry.getValue());
+		if (headers != null) {
+			for (Entry<String, String> entry : headers.entrySet()) {
+				((HttpRequest) request).setHeader(entry.getKey(), entry.getValue());
+			}
 		}
 		return request;
 	}
