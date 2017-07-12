@@ -268,9 +268,8 @@ public class RestClient {
 	}
 
 	private void makeRequest(HttpRequestBase request, Session session) {
-		System.out.println(session.getProxy().getHttpHost());
 		if (session.getProxy().isInUse()) {
-			System.out.println(session.getProxy().getHttpHost());
+			request.getConfig();
 			request.setConfig(RequestConfig.custom().setProxy(session.getProxy().getHttpHost()).build());
 		}
 		request = this.setHeaders(request, session.getHeaders());
@@ -326,6 +325,16 @@ public class RestClient {
 
 		if (auth.isAuthenticable()) {
 			httpClientBuilder.setDefaultCredentialsProvider(authHelper.getCredentialsProvider(auth, target));
+		}
+
+		if (proxy != null && proxy.isInUse()) {
+			logger.debug("Enabling proxy");
+			if (proxy.isAuthenticable()) {
+				logger.debug("Setting proxy credentials");
+				httpClientBuilder.setDefaultCredentialsProvider(
+						authHelper.getCredentialsProvider(proxy.getAuth(), proxy.getHttpHost()));
+			}
+			requestConfig.setProxy(proxy.getHttpHost());
 		}
 
 		if (postRedirects) {
