@@ -21,6 +21,7 @@ public class Proxy {
 		if (robotDictionary.size() > 0) {
 			this.host = robotDictionary.get("host");
 			this.port = Integer.parseInt(robotDictionary.get("port"));
+			this.use = true;
 			logger.debug(String.format("Created proxy through %s:%s", this.host, this.port));
 			if (robotDictionary.get("username") != null && robotDictionary.get("password") != null) {
 				this.authenticable = true;
