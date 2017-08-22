@@ -47,6 +47,7 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.WinHttpClients;
 import org.apache.http.message.BasicNameValuePair;
 
 import com.github.hi_fi.httpclient.domain.Authentication;
@@ -306,7 +307,7 @@ public class RestClient {
 			Proxy proxy) {
 		Certificate certificate = new Certificate();
 		Auth authHelper = new Auth();
-		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+		HttpClientBuilder httpClientBuilder = WinHttpClients.custom();
 		Builder requestConfig = RequestConfig.custom();
 		requestConfig.setCookieSpec(CookieSpecs.DEFAULT);
 
