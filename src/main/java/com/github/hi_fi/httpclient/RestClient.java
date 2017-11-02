@@ -247,7 +247,7 @@ public class RestClient {
 				}
 				return new UrlEncodedFormEntity(params, "UTF-8");
 			} else {
-				return new StringEntity(data.toString());
+				return new StringEntity(data.toString(), "UTF-8");
 			}
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unsupported encoding noticed. Error message: " + e.getMessage());
