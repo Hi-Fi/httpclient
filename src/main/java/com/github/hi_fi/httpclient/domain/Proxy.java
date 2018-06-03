@@ -18,7 +18,7 @@ public class Proxy {
 	private boolean use = false;
 
 	public Proxy(Map<String, String> robotDictionary) {
-		if (robotDictionary.size() > 0) {
+		if (robotDictionary != null && robotDictionary.size() > 0) {
 			this.host = robotDictionary.get("host");
 			this.port = Integer.parseInt(robotDictionary.get("port"));
 			this.use = true;

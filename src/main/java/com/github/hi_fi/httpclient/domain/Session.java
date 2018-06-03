@@ -28,7 +28,7 @@ public class Session {
     private HostnameVerifier hostnameVerifier;
     private TrustStrategy trustStrategy;	
     private String password;
-    private Proxy proxy;
+    private Proxy proxy = new Proxy(null);
 
 	public String getAlias() {
 		return alias;
