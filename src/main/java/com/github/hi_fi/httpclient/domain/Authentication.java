@@ -51,6 +51,7 @@ public class Authentication {
 		this.domain = domain;
 		this.type = type;
 		this.authenticable = true;
+		this.preemptiveAuthentication = true;
 	}
 
 	public String getUsername() {

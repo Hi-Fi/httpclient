@@ -104,7 +104,7 @@ public class RestClient {
 			throw new RuntimeException("Parsing of URL failed. Error message: " + e.getMessage());
 		}
 		Session session = new Session();
-		session.setProxy(proxy);
+		if (proxy != null) { session.setProxy(proxy); }
 		session.setContext(this.createContext(auth, target));
 		session.setClient(this.createHttpClient(auth, verify, target, false, password, null, null, proxy));
 		session.setUrl(url);
