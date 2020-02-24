@@ -20,9 +20,8 @@ public class ResponseData {
         for (Header header : headerArray) {
             if ("Set-Cookie".equalsIgnoreCase(header.getName())) {
                 cookies.add(header.getValue());
-            } else {
-                this.headers.put(header.getName(), header.getValue());
             }
+            this.headers.put(header.getName(), header.getValue());
         }
     }
 
