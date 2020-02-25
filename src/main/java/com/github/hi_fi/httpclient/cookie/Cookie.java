@@ -21,7 +21,7 @@ public class Cookie extends LinkedHashMap<String, String> {
     protected void parse(String setCookieValue) {
         String[] pairs = setCookieValue.split("; ");
         for (String pair : pairs) {
-            String[] parts = pair.split("=");
+            String[] parts = pair.split("=", 2);
             String name = parts[0];
             String value = parts.length == 2 ? parts[1] : "";
             put(name, value);
